@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Meu Google Lens</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        #preview { max-width: 300px; margin: 10px auto; }
+        #result { margin-top: 20px; padding: 10px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <h1>Envie uma Imagem</h1>
+    <input type="file" id="imageInput" accept="image/*">
+    <div>
+        <img id="preview" style="display: none;">
+    </div>
+    <button onclick="extractText()">Extrair Texto</button>
+    <div id="result"></div>
+
+    <script>
+        const imageInput = document.getElementById('imageInput');
+        const preview = document.getElementById('preview');
+        const resultDiv = document.getElementById('result');
+
+        // Mostra a imagem selecionada
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                preview.src = URL.createObjectURL(file);
+                preview.style.display = 'block';
+            }
+        });
+
+        // Extrai texto da imagem usando Tesseract.js (100% frontend)
+        async function extractText() {
+            if (!imageInput.files[0]) {
+                alert('Selecione uma imagem primeiro!');
+                return;
+            }
+
+            resultDiv.innerHTML = "Processando... (pode demorar um pouco)";
+
+            try {
+                const { data: { text } } = await Tesseract.recognize(
+                    imageInput.files[0],
+                    'por+eng', // Idiomas: português + inglês
+                    { logger: m => console.log(m) }
+                );
+                resultDiv.innerHTML = `<strong>Texto extraído:</strong><br>${text}`;
+            } catch (error) {
+                resultDiv.innerHTML = "Erro ao processar a imagem :(";
+                console.error(error);
+            }
+        }
+        function searchGoogle(text) {
+    if (!text) return;
+    const query = encodeURIComponent(text);
+    window.open(`https://www.google.com/search?q=${query}`, '_blank');
+}
+
+    </script>
+</body>
+</html>
