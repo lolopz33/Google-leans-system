@@ -1,64 +1,712 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-    <title>Meu Google Lens</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub RAW Lens - Reconhecimento Avançado</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-        #preview { max-width: 300px; margin: 10px auto; }
-        #result { margin-top: 20px; padding: 10px; border: 1px solid #ccc; }
+        :root {
+            --primary-color: #24292e;
+            --secondary-color: #0366d6;
+            --light-color: #f6f8fa;
+            --dark-color: #1b1f23;
+            --success-color: #28a745;
+            --warning-color: #ffd33d;
+            --danger-color: #d73a49;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--dark-color);
+            background-color: var(--light-color);
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        h1 {
+            margin: 0;
+            font-size: 2rem;
+        }
+        
+        .subtitle {
+            font-size: 1rem;
+            opacity: 0.8;
+            margin-top: 8px;
+        }
+        
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .input-section, .output-section {
+            flex: 1;
+            min-width: 300px;
+            background: white;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .preview-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        #preview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 6px;
+            border: 1px solid #e1e4e8;
+            display: none;
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            flex: 1;
+            min-width: 120px;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background-color: #005cc5;
+        }
+        
+        button.secondary {
+            background-color: #fafbfc;
+            color: var(--dark-color);
+            border: 1px solid rgba(27, 31, 35, 0.15);
+        }
+        
+        button.secondary:hover {
+            background-color: #f3f4f6;
+        }
+        
+        button.success {
+            background-color: var(--success-color);
+        }
+        
+        button.success:hover {
+            background-color: #22863a;
+        }
+        
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            background-color: white;
+            border: 1px solid #e1e4e8;
+            min-height: 100px;
+            white-space: pre-wrap;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        }
+        
+        .github-preview {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            background-color: #f6f8fa;
+            border: 1px solid #e1e4e8;
+            display: none;
+        }
+        
+        .tab-container {
+            display: flex;
+            border-bottom: 1px solid #e1e4e8;
+            margin-bottom: 15px;
+        }
+        
+        .tab {
+            padding: 8px 16px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-bottom: none;
+            border-radius: 6px 6px 0 0;
+            margin-right: 5px;
+        }
+        
+        .tab.active {
+            background-color: white;
+            border-color: #e1e4e8;
+            border-bottom-color: white;
+            font-weight: 600;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .url-detected {
+            background-color: rgba(3, 102, 214, 0.1);
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            border-left: 3px solid var(--secondary-color);
+        }
+        
+        .url-detected a {
+            color: var(--secondary-color);
+            font-weight: 600;
+            text-decoration: none;
+        }
+        
+        .url-detected a:hover {
+            text-decoration: underline;
+        }
+        
+        .progress-container {
+            margin-top: 10px;
+            height: 5px;
+            background-color: #e1e4e8;
+            border-radius: 3px;
+            overflow: hidden;
+            display: none;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background-color: var(--secondary-color);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .status {
+            font-size: 0.9rem;
+            color: #586069;
+            margin-top: 5px;
+            display: none;
+        }
+        
+        .error {
+            color: var(--danger-color);
+            background-color: rgba(215, 58, 73, 0.1);
+            padding: 10px;
+            border-radius: 6px;
+            border-left: 3px solid var(--danger-color);
+            display: none;
+        }
+        
+        .features {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .feature {
+            background-color: white;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 15px;
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .feature h3 {
+            margin-top: 0;
+            color: var(--secondary-color);
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>Envie uma Imagem</h1>
-    <input type="file" id="imageInput" accept="image/*">
-    <div>
-        <img id="preview" style="display: none;">
+    <header>
+        <h1>GitHub RAW Lens</h1>
+        <div class="subtitle">Reconhecimento avançado de padrões GitHub RAW, códigos e URLs</div>
+    </header>
+    
+    <div class="container">
+        <div class="input-section">
+            <h2>Carregar Imagem</h2>
+            <input type="file" id="imageInput" accept="image/*, .png, .jpg, .jpeg, .webp" style="display: none;">
+            <button onclick="document.getElementById('imageInput').click()" class="secondary">Selecionar Imagem</button>
+            
+            <div class="preview-container">
+                <img id="preview">
+            </div>
+            
+            <div class="buttons">
+                <button onclick="extractText()" id="extractBtn">Extrair Texto</button>
+                <button onclick="clearAll()" class="secondary">Limpar Tudo</button>
+            </div>
+            
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            
+            <div class="status" id="status">Iniciando processamento...</div>
+            
+            <div class="error" id="error"></div>
+            
+            <div class="features">
+                <div class="feature">
+                    <h3>GitHub RAW</h3>
+                    <p>Reconhece URLs RAW do GitHub e exibe o conteúdo diretamente.</p>
+                </div>
+                <div class="feature">
+                    <h3>Código Fonte</h3>
+                    <p>Identifica e formata trechos de código para melhor legibilidade.</p>
+                </div>
+                <div class="feature">
+                    <h3>Markdown</h3>
+                    <p>Renderiza conteúdo Markdown encontrado nas imagens.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="output-section">
+            <h2>Resultados</h2>
+            
+            <div class="tab-container">
+                <div class="tab active" onclick="switchTab('textTab')">Texto Extraído</div>
+                <div class="tab" onclick="switchTab('githubTab')">GitHub Preview</div>
+                <div class="tab" onclick="switchTab("codeTab")">Análise de Código</div>
+            </div>
+            
+            <div class="tab-content active" id="textTab">
+                <div id="result">Nenhum conteúdo extraído ainda. Carregue uma imagem e clique em "Extrair Texto".</div>
+            </div>
+            
+            <div class="tab-content" id="githubTab">
+                <div class="github-preview" id="githubPreview">
+                    <p>Nenhum conteúdo GitHub detectado ainda.</p>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="codeTab">
+                <div id="codeAnalysis">
+                    <p>Nenhuma análise de código disponível ainda.</p>
+                </div>
+            </div>
+            
+            <div class="buttons" style="margin-top: 20px;">
+                <button onclick="searchGoogle()" class="secondary">Pesquisar no Google</button>
+                <button onclick="searchGitHub()" class="secondary">Pesquisar no GitHub</button>
+                <button onclick="openRawUrl()" class="success" id="openRawBtn" style="display: none;">Abrir URL RAW</button>
+            </div>
+        </div>
     </div>
-    <button onclick="extractText()">Extrair Texto</button>
-    <div id="result"></div>
 
     <script>
+        // Elementos DOM
         const imageInput = document.getElementById('imageInput');
         const preview = document.getElementById('preview');
         const resultDiv = document.getElementById('result');
-
+        const githubPreview = document.getElementById('githubPreview');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const statusDiv = document.getElementById('status');
+        const errorDiv = document.getElementById('error');
+        const extractBtn = document.getElementById('extractBtn');
+        const openRawBtn = document.getElementById('openRawBtn');
+        const codeAnalysisDiv = document.getElementById('codeAnalysis');
+        
+        // Variáveis de estado
+        let extractedText = '';
+        let githubRawUrl = '';
+        let isProcessing = false;
+        
         // Mostra a imagem selecionada
         imageInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
-                preview.src = URL.createObjectURL(file);
-                preview.style.display = 'block';
+                // Verifica o tipo do arquivo
+                if (!file.type.match('image.*')) {
+                    showError('Por favor, selecione um arquivo de imagem válido.');
+                    return;
+                }
+                
+                // Verifica o tamanho do arquivo (limite de 5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    showError('A imagem é muito grande. Por favor, selecione uma imagem menor que 5MB.');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    preview.src = event.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+                
+                // Limpa resultados anteriores
+                clearResults();
             }
         });
-
-        // Extrai texto da imagem usando Tesseract.js (100% frontend)
+        
+        // Extrai texto da imagem usando Tesseract.js
         async function extractText() {
             if (!imageInput.files[0]) {
-                alert('Selecione uma imagem primeiro!');
+                showError('Selecione uma imagem primeiro!');
                 return;
             }
-
-            resultDiv.innerHTML = "Processando... (pode demorar um pouco)";
-
+            
+            if (isProcessing) return;
+            isProcessing = true;
+            
+            // Configura UI para processamento
+            extractBtn.disabled = true;
+            extractBtn.textContent = 'Processando...';
+            progressContainer.style.display = 'block';
+            statusDiv.style.display = 'block';
+            errorDiv.style.display = 'none';
+            
             try {
                 const { data: { text } } = await Tesseract.recognize(
                     imageInput.files[0],
-                    'por+eng', // Idiomas: português + inglês
-                    { logger: m => console.log(m) }
+                    'eng+por+spa', // Idiomas: inglês + português + espanhol
+                    {
+                        logger: m => {
+                            updateProgress(m);
+                        }
+                    }
                 );
-                resultDiv.innerHTML = `<strong>Texto extraído:</strong><br>${text}`;
+                
+                extractedText = text;
+                resultDiv.textContent = text;
+                
+                // Processa o texto para encontrar padrões GitHub
+                processExtractedText(text);
+                
             } catch (error) {
-                resultDiv.innerHTML = "Erro ao processar a imagem :(";
-                console.error(error);
+                console.error('Erro no Tesseract:', error);
+                showError('Erro ao processar a imagem. Tente novamente com uma imagem mais nítida.');
+            } finally {
+                isProcessing = false;
+                extractBtn.disabled = false;
+                extractBtn.textContent = 'Extrair Texto';
+                progressContainer.style.display = 'none';
+                statusDiv.style.display = 'none';
             }
         }
-        function searchGoogle(text) {
-    if (!text) return;
-    const query = encodeURIComponent(text);
-    window.open(`https://www.google.com/search?q=${query}`, '_blank');
-}
-
+        
+        // Atualiza a barra de progresso e status
+        function updateProgress(message) {
+            if (message.status === 'recognizing text') {
+                progressBar.style.width = `${message.progress * 100}%`;
+                statusDiv.textContent = `Processando: ${(message.progress * 100).toFixed(1)}%`;
+            } else {
+                statusDiv.textContent = message.status;
+            }
+        }
+        
+        // Mostra mensagem de erro
+        function showError(message) {
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+        
+        // Processa o texto extraído para encontrar padrões GitHub
+        function processExtractedText(text) {
+            // Limpa resultados anteriores
+            githubPreview.style.display = 'none';
+            openRawBtn.style.display = 'none';
+            githubRawUrl = '';
+            
+            // 1. Procura por URLs GitHub RAW
+            const githubRawRegex = /https?:\/\/raw\.githubusercontent\.com\/[^\s]+/gi;
+            const githubUrls = text.match(githubRawRegex);
+            
+            if (githubUrls && githubUrls.length > 0) {
+                githubRawUrl = githubUrls[0];
+                displayGitHubInfo(githubRawUrl);
+                openRawBtn.style.display = 'block';
+            }
+            
+            // 2. Procura por URLs de repositórios GitHub
+            const githubRepoRegex = /https?:\/\/github\.com\/[^\s]+/gi;
+            const repoUrls = text.match(githubRepoRegex);
+            
+            if (repoUrls && repoUrls.length > 0) {
+                displayGitHubRepoInfo(repoUrls[0]);
+            }
+            
+            // 3. Procura por trechos de código
+            const codeBlocks = extractCodeBlocks(text);
+            if (codeBlocks.length > 0) {
+                displayCodeAnalysis(codeBlocks);
+            }
+            
+            // 4. Procura por conteúdo Markdown
+            if (text.includes('#') || text.includes('*') || text.includes('`')) {
+                displayMarkdownContent(text);
+            }
+        }
+        
+        // Exibe informações de arquivos GitHub RAW
+        async function displayGitHubInfo(url) {
+            githubPreview.innerHTML = '<p>Detectado arquivo GitHub RAW:</p>';
+            
+            const urlElement = document.createElement('div');
+            urlElement.className = 'url-detected';
+            urlElement.innerHTML = `<a href="${url}" target="_blank">${url}</a>`;
+            githubPreview.appendChild(urlElement);
+            
+            try {
+                // Tenta buscar o conteúdo do arquivo RAW
+                const response = await fetch(url);
+                if (response.ok) {
+                    const content = await response.text();
+                    
+                    // Verifica se é Markdown
+                    if (url.endsWith('.md') || url.endsWith('.markdown')) {
+                        const converter = new showdown.Converter();
+                        githubPreview.innerHTML += '<h3>Visualização Markdown:</h3>';
+                        githubPreview.innerHTML += converter.makeHtml(content);
+                    } else {
+                        githubPreview.innerHTML += '<h3>Conteúdo do arquivo:</h3>';
+                        const pre = document.createElement('pre');
+                        pre.textContent = content;
+                        githubPreview.appendChild(pre);
+                    }
+                } else {
+                    githubPreview.innerHTML += '<p>Não foi possível carregar o conteúdo do arquivo.</p>';
+                }
+            } catch (error) {
+                githubPreview.innerHTML += '<p>Erro ao acessar o arquivo RAW.</p>';
+                console.error('Erro ao acessar GitHub RAW:', error);
+            }
+            
+            githubPreview.style.display = 'block';
+            switchTab('githubTab');
+        }
+        
+        // Exibe informações de repositórios GitHub
+        function displayGitHubRepoInfo(url) {
+            const repoInfo = document.createElement('div');
+            repoInfo.className = 'url-detected';
+            repoInfo.innerHTML = `
+                <p>Detectado repositório GitHub:</p>
+                <a href="${url}" target="_blank">${url}</a>
+                <p>Você pode acessar o conteúdo RAW adicionando "/raw/main/" após o nome do repositório e antes do nome do arquivo.</p>
+            `;
+            
+            if (githubPreview.firstChild) {
+                githubPreview.insertBefore(repoInfo, githubPreview.firstChild);
+            } else {
+                githubPreview.appendChild(repoInfo);
+            }
+            
+            githubPreview.style.display = 'block';
+        }
+        
+        // Extrai blocos de código do texto
+        function extractCodeBlocks(text) {
+            // Padrões comuns de blocos de código
+            const codePatterns = [
+                /```[\s\S]*?```/g,        // ``` code ```
+                /~~~[\s\S]*?~~~/g,        // ~~~ code ~~~
+                /`[^`]+`/g,               // `code`
+                /^ {4}.+$/gm,              // Indentação de 4 espaços
+                /^\t.+$/gm,                // Linhas começando com tab
+                /(?:public|private|class|function|def|import|package|var|let|const)\s+.+/g // Palavras-chave de linguagens
+            ];
+            
+            const codeBlocks = [];
+            
+            codePatterns.forEach(pattern => {
+                const matches = text.match(pattern);
+                if (matches) {
+                    codeBlocks.push(...matches);
+                }
+            });
+            
+            return codeBlocks;
+        }
+        
+        // Exibe análise de código
+        function displayCodeAnalysis(codeBlocks) {
+            codeAnalysisDiv.innerHTML = '<h3>Blocos de Código Detectados:</h3>';
+            
+            if (codeBlocks.length === 0) {
+                codeAnalysisDiv.innerHTML += '<p>Nenhum bloco de código identificado.</p>';
+                return;
+            }
+            
+            codeAnalysisDiv.innerHTML += `<p>${codeBlocks.length} blocos de código encontrados:</p>`;
+            
+            codeBlocks.forEach((block, index) => {
+                const codeElement = document.createElement('div');
+                codeElement.style.marginBottom = '15px';
+                codeElement.innerHTML = `
+                    <div style="font-size: 0.8rem; color: #586069; margin-bottom: 5px;">Bloco ${index + 1}:</div>
+                    <pre style="background: #f6f8fa; padding: 10px; border-radius: 6px; overflow-x: auto;">${block}</pre>
+                `;
+                codeAnalysisDiv.appendChild(codeElement);
+            });
+            
+            // Adiciona dicas para GitHub RAW
+            const tips = document.createElement('div');
+            tips.style.marginTop = '20px';
+            tips.innerHTML = `
+                <h4>Dica para GitHub:</h4>
+                <p>Para compartilhar código no GitHub, crie um <a href="https://gist.github.com/" target="_blank">Gist</a> ou adicione o arquivo a um repositório e acesse via URL RAW.</p>
+                <p>Formato da URL RAW: <code>https://raw.githubusercontent.com/[usuário]/[repositório]/[branch]/[caminho-arquivo]</code></p>
+            `;
+            codeAnalysisDiv.appendChild(tips);
+        }
+        
+        // Exibe conteúdo Markdown renderizado
+        function displayMarkdownContent(text) {
+            // Extrai seções que parecem Markdown
+            const markdownSections = text.split('\n').filter(line => 
+                line.startsWith('#') || 
+                line.startsWith('*') || 
+                line.startsWith('-') || 
+                line.includes('`') ||
+                line.match(/\[.*\]\(.*\)/)
+            ).join('\n');
+            
+            if (markdownSections.length > 10) { // Limite mínimo para considerar como Markdown
+                const converter = new showdown.Converter();
+                const markdownDiv = document.createElement('div');
+                markdownDiv.innerHTML = '<h3>Conteúdo Markdown Detectado:</h3>' + converter.makeHtml(markdownSections);
+                
+                if (githubPreview.firstChild) {
+                    githubPreview.insertBefore(markdownDiv, githubPreview.firstChild);
+                } else {
+                    githubPreview.appendChild(markdownDiv);
+                }
+                
+                githubPreview.style.display = 'block';
+            }
+        }
+        
+        // Limpa todos os resultados
+        function clearAll() {
+            imageInput.value = '';
+            preview.src = '';
+            preview.style.display = 'none';
+            resultDiv.textContent = 'Nenhum conteúdo extraído ainda. Carregue uma imagem e clique em "Extrair Texto".';
+            githubPreview.innerHTML = '<p>Nenhum conteúdo GitHub detectado ainda.</p>';
+            githubPreview.style.display = 'none';
+            codeAnalysisDiv.innerHTML = '<p>Nenhuma análise de código disponível ainda.</p>';
+            progressContainer.style.display = 'none';
+            statusDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+            openRawBtn.style.display = 'none';
+            extractedText = '';
+            githubRawUrl = '';
+            extractBtn.disabled = false;
+            extractBtn.textContent = 'Extrair Texto';
+        }
+        
+        // Limpa apenas os resultados (mantém a imagem)
+        function clearResults() {
+            resultDiv.textContent = 'Nenhum conteúdo extraído ainda. Carregue uma imagem e clique em "Extrair Texto".';
+            githubPreview.innerHTML = '<p>Nenhum conteúdo GitHub detectado ainda.</p>';
+            githubPreview.style.display = 'none';
+            codeAnalysisDiv.innerHTML = '<p>Nenhuma análise de código disponível ainda.</p>';
+            progressContainer.style.display = 'none';
+            statusDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+            openRawBtn.style.display = 'none';
+            extractedText = '';
+            githubRawUrl = '';
+        }
+        
+        // Alterna entre abas
+        function switchTab(tabId) {
+            // Esconde todas as abas
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove a classe active de todas as tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Mostra a aba selecionada
+            document.getElementById(tabId).classList.add('active');
+            
+            // Ativa a tab correspondente
+            document.querySelectorAll('.tab').forEach(tab => {
+                if (tab.textContent.toLowerCase().includes(tabId.replace('Tab', '').toLowerCase())) {
+                    tab.classList.add('active');
+                }
+            });
+        }
+        
+        // Pesquisa no Google
+        function searchGoogle() {
+            if (!extractedText) {
+                showError('Extraia texto primeiro antes de pesquisar.');
+                return;
+            }
+            
+            const query = encodeURIComponent(extractedText);
+            window.open(`https://www.google.com/search?q=${query}`, '_blank');
+        }
+        
+        // Pesquisa no GitHub
+        function searchGitHub() {
+            if (!extractedText) {
+                showError('Extraia texto primeiro antes de pesquisar.');
+                return;
+            }
+            
+            const query = encodeURIComponent(extractedText);
+            window.open(`https://github.com/search?q=${query}&type=code`, '_blank');
+        }
+        
+        // Abre URL RAW detectada
+        function openRawUrl() {
+            if (githubRawUrl) {
+                window.open(githubRawUrl, '_blank');
+            } else {
+                showError('Nenhuma URL GitHub RAW detectada.');
+            }
+        }
+        
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', () => {
+            // Adiciona dicas de uso
+            const tips = [
+                'Dica: Fotografe URLs GitHub RAW para visualizar o conteúdo diretamente.',
+                'Dica: O app reconhece automaticamente blocos de código e formata para melhor leitura.',
+                'Dica: URLs de repositórios GitHub são automaticamente detectadas e destacadas.'
+            ];
+            
+            console.log(tips.join('\n'));
+        });
     </script>
 </body>
 </html>
